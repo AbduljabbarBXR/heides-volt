@@ -4,6 +4,7 @@ import { Muscle } from './muscle/index.js';
 import { complete, describeBrain } from './brain/index.js';
 import { heidesAvailable, runTurn } from './vessel/index.js';
 import { propose, attempt } from './curiosity/index.js';
+import { listSkills, exportSkill, importSkill } from './skills/index.js';
 import { VERSION } from './version.js';
 
 export const HELP_LINES = [
@@ -16,6 +17,9 @@ export const HELP_LINES = [
   'recall TEXT: find stored facts',
   'stats: show muscle stats',
   'curious: propose plus attempt one learning step',
+  'skills: list learned skills',
+  'export NAME FILE: write signed skill file',
+  'import FILE: verify plus merge skill file',
   'any other text runs one turn through muscle then brain',
 ];
 
@@ -94,6 +98,28 @@ export async function main(argv, opts = {}) {
     const res = await attempt(muscle, { complete }, p);
     say(res.note);
     return 0;
+  }
+  if (cmd === 'skills') {
+    const store = new Store(storeDir);
+    const muscle = new Muscle(store);
+    const skills = listSkills(muscle);
+    if (skills.length === 0) say('no skills yet, use curious first');
+    for (const s of skills) say(`skill ${s.tool} wins ${s.wins}`);
+    return 0;
+  }
+  if (cmd === 'export') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = exportSkill(muscle, store.dir, rest[0], rest[1] || null);
+    say(res.file ? `${res.note}: ${res.file}` : res.note);
+    return res.ok ? 0 : 1;
+  }
+  if (cmd === 'import') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = importSkill(muscle, store.dir, rest[0]);
+    say(res.note);
+    return res.ok ? 0 : 1;
   }
 
   const store = new Store(storeDir);
