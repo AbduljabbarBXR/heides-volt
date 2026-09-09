@@ -2,3 +2,4 @@ node_modules/
 .harness/
 *.log
 .DS_Store
+__pycache__/
