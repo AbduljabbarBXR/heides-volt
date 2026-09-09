@@ -28,7 +28,7 @@ export function verifyGate(action) {
 export async function runTurn(input, deps) {
   const { muscle, brain } = deps;
   const text = String(input || '').trim();
-  if (!text) return { path: 'none', reply: 'empty input ignored' };
+  if (!text) return { path: 'none', tool: null, reply: 'empty input ignored' };
 
   const guess = muscle.predictTool(text);
   if (guess.tool && guess.confidence === 'high') {
@@ -39,6 +39,7 @@ export async function runTurn(input, deps) {
       muscle.record({ intent: text, tool: guess.tool, ok: true });
       return {
         path: 'fast',
+        tool: guess.tool,
         reply: `muscle served this with tool ${guess.tool}, no brain call needed`,
       };
     }
@@ -47,6 +48,6 @@ export async function runTurn(input, deps) {
   const out = await brain.complete(text);
   const verdict = verifyGate({ tool: out.tool, input: text });
   muscle.record({ intent: text, tool: out.tool || 'chat', ok: verdict.pass });
-  if (!verdict.pass) return { path: 'slow', reply: 'brain output failed verify, muscle learned nothing' };
-  return { path: 'slow', reply: out.text };
+  if (!verdict.pass) return { path: 'slow', tool: out.tool || null, reply: 'brain output failed verify, muscle learned nothing' };
+  return { path: 'slow', tool: out.tool || 'chat', reply: out.text };
 }

@@ -15,7 +15,7 @@ export function configDir() {
 }
 
 export function blankData() {
-  return { facts: [], routes: {}, macros: {}, recent: [], stats: { turns: 0, recalls: 0, fastHits: 0 } };
+  return { facts: [], routes: {}, macros: {}, recent: [], peers: [], stats: { turns: 0, recalls: 0, fastHits: 0 } };
 }
 
 export class Store {

@@ -5,6 +5,7 @@ import { complete, describeBrain } from './brain/index.js';
 import { heidesAvailable, runTurn } from './vessel/index.js';
 import { propose, attempt } from './curiosity/index.js';
 import { listSkills, exportSkill, importSkill } from './skills/index.js';
+import { startNode, linkPeer, delegateTask } from './mesh/index.js';
 import { VERSION } from './version.js';
 
 export const HELP_LINES = [
@@ -20,6 +21,10 @@ export const HELP_LINES = [
   'skills: list learned skills',
   'export NAME FILE: write signed skill file',
   'import FILE: verify plus merge skill file',
+  'serve PORT: start mesh node on loopback',
+  'link HOST PORT: connect a peer and swap caps',
+  'peers: list known peers',
+  'delegate HOST PORT TEXT: run text on peer',
   'any other text runs one turn through muscle then brain',
 ];
 
@@ -120,6 +125,45 @@ export async function main(argv, opts = {}) {
     const res = importSkill(muscle, store.dir, rest[0]);
     say(res.note);
     return res.ok ? 0 : 1;
+  }
+  if (cmd === 'serve') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const node = await startNode({ muscle, brain: { complete }, port: rest[0] || 0 });
+    say(`mesh node listening on ${node.host} port ${node.port}`);
+    await new Promise(() => {});
+    return 0;
+  }
+  if (cmd === 'link') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    try {
+      const caps = await linkPeer(muscle, store, rest[0], rest[1]);
+      say(`peer linked: ${(caps.skills || []).length} skill(s) advertised`);
+    } catch (e) {
+      say(`link failed: ${e.message}`);
+      return 1;
+    }
+    return 0;
+  }
+  if (cmd === 'peers') {
+    const store = new Store(storeDir || undefined);
+    const peers = store.data.peers || [];
+    if (peers.length === 0) say('no peers yet, use link first');
+    for (const p of peers) say(`peer ${p.id} at ${p.host} port ${p.port} skills ${(p.skills || []).length}`);
+    return 0;
+  }
+  if (cmd === 'delegate') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    try {
+      const res = await delegateTask(muscle, rest[0], rest[1], rest.slice(2).join(' '));
+      say(res.reply);
+    } catch (e) {
+      say(`delegate failed: ${e.message}`);
+      return 1;
+    }
+    return 0;
   }
 
   const store = new Store(storeDir);
