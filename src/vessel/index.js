@@ -41,7 +41,15 @@ export async function runTurn(input, deps) {
   const macro = muscle.macroSuggest();
   if (macro) {
     const verdict = verifyGate({ tool: macro, input: text });
-    if (verdict.pass) {
+    let deepOk = true;
+    if (verdict.pass && deps.deepCheck) {
+      try {
+        deepOk = deps.deepCheck(deps.cwd || process.cwd()).pass !== false;
+      } catch {
+        deepOk = false;
+      }
+    }
+    if (verdict.pass && deepOk) {
       muscle.noteFastHit();
       muscle.record({ intent: text, tool: macro, ok: true });
       return { path: 'fast', tool: macro, reply: `macro fired ${macro} with zero brain call` };

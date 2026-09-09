@@ -9,7 +9,8 @@ import { startNode, linkPeer, delegateTask } from './mesh/index.js';
 import { deepCheck, stagedFile } from './vessel/verify.js';
 import { allowOrigin, denyOrigin, setQuorum, revokeOrigin, trustReport } from './skills/trust.js';
 import { watchLoop } from './sched/index.js';
-import { exportDistill, distillStats } from './sleep/index.js';
+import { exportDistill, distillStats, sleepCycle } from './sleep/index.js';
+import { publishSkill, listMarket, fetchSkill } from './skills/market.js';
 import { webget, websearch } from './web/index.js';
 import { VERSION } from './version.js';
 
@@ -39,6 +40,10 @@ export const HELP_LINES = [
   'revoke FP: roll back origin',
   'watch SECONDS: tick curiosity on interval',
   'distill FILE: export sleep training pairs',
+  'sleep: consolidate traces into adapter',
+  'publish NAME: shelve proven skill',
+  'market: list shelved skills',
+  'fetch NAME: import skill by name',
   'webget URL: fetch page as text',
   'websearch TEXT: search the web',
   'any other text runs one turn through muscle then brain',
@@ -241,6 +246,34 @@ export async function main(argv, opts = {}) {
     say(`${res.note}: ${res.file}`);
     return 0;
   }
+  if (cmd === 'sleep') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = sleepCycle(muscle, {});
+    say(res.file ? `${res.note}: ${res.file}` : res.note);
+    return res.ok ? 0 : 1;
+  }
+  if (cmd === 'publish') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = publishSkill(muscle, store, rest[0]);
+    say(res.note);
+    return res.ok ? 0 : 1;
+  }
+  if (cmd === 'market') {
+    const store = new Store(storeDir || undefined);
+    const entries = listMarket(store);
+    if (entries.length === 0) say('market empty, publish first');
+    for (const e of entries) say(`shelf: ${e.name} origin ${e.origin}`);
+    return 0;
+  }
+  if (cmd === 'fetch') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = fetchSkill(muscle, store, rest[0]);
+    say(res.note);
+    return res.ok ? 0 : 1;
+  }
   if (cmd === 'webget') {
     const res = await webget(rest[0]);
     if (!res.ok) {
@@ -265,7 +298,7 @@ export async function main(argv, opts = {}) {
 
   const store = new Store(storeDir);
   const muscle = new Muscle(store);
-  const res = await runTurn([cmd, ...rest].join(' '), { muscle, brain: { complete } });
+  const res = await runTurn([cmd, ...rest].join(' '), { muscle, brain: { complete }, deepCheck, cwd: process.cwd() });
   say(res.reply);
   return 0;
 }

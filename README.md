@@ -106,6 +106,19 @@ HARNESS_SEARCH=tavily TAVILY_API_KEY=... node ./bin/harness websearch <query>
 HARNESS_SEARCH=brave BRAVE_API_KEY=... node ./bin/harness websearch <query>
 ```
 
+Sleep pipeline plus market shelf:
+
+```bash
+# night shift: dataset out, trainer runs, promote only on green evals
+node ./bin/harness sleep
+HARNESS_TRAINER=./train.sh node ./bin/harness sleep
+
+# shelf proven skills by name, fetch honors trust
+node ./bin/harness publish check
+node ./bin/harness market
+node ./bin/harness fetch check
+```
+
 Grow while you sleep:
 
 ```bash
@@ -186,8 +199,10 @@ src/
                pairing codes plus sealed caps
   sched/       daemon heartbeat: watch ticks curiosity
   sleep/       rest time growth: trace log plus JSONL distill
-               export for LoRA sleep training
+               export for LoRA sleep training, trainer pipeline
+               with promote only on green evals
   web/         outside eyes: page fetch plus search channels
+  skills/market.js named shelf: publish, market, fetch
 ```
 
 The turn loop:
@@ -216,8 +231,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    graph, macro fire, watch daemon, live 360M local proof (shipped).
 6. Growth plus web: recall rides into prompts, traces distill to
    JSONL for sleep LoRA, page fetch plus two search channels (shipped).
-7. Next: sleep trainer reference job, skill marketplace, HEIDES
-   staged gate on every macro fire.
+7. Night plus market: sleep pipeline with eval gated promote, named
+   skill shelf, deep gate on macro fire (shipped).
+8. Next: sleep trainer reference job for real LoRA, skill marketplace
+   across devices, scheduled watch plus sleep in one daemon.
 
 ## Relation to HEIDES and VOLT
 
