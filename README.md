@@ -1,4 +1,4 @@
-# HEIDES AGI Harness
+# HEIDES VOLT
 
 The vessel that turns any brain into a learning resident.
 
@@ -32,8 +32,8 @@ you: copyable, private, offline capable.
 Zero dependencies. Node 18 or newer, no install step.
 
 ```bash
-git clone https://github.com/AbduljabbarBXR/heides-agi-harness.git
-cd heides-agi-harness
+git clone https://github.com/AbduljabbarBXR/heides-volt.git
+cd heides-volt
 node ./bin/harness doctor
 node ./bin/harness demo
 node ./bin/harness help
@@ -42,7 +42,7 @@ node ./bin/harness help
 One line installers:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/AbduljabbarBXR/heides-agi-harness/main/scripts/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/AbduljabbarBXR/heides-volt/main/scripts/install.sh)
 bash scripts/termux-setup.sh
 ```
 

@@ -23,5 +23,5 @@ test('authored UI strings content check', () => {
 test('banner file exists under assets', () => {
   const p = join(here, '..', 'assets', 'banner.txt');
   const text = readFileSync(p, 'utf8');
-  assert(text.includes('H A R N E S S'));
+  assert(text.includes('V O L T'));
 });

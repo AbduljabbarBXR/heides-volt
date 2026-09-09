@@ -1,7 +1,7 @@
 {
-  "name": "heides-agi-harness",
+  "name": "heides-volt",
   "version": "1.0.0",
-  "description": "HEIDES AGI harness: the vessel that turns any brain into a learning resident",
+  "description": "HEIDES VOLT: the vessel that turns any brain into a learning resident",
   "type": "module",
   "bin": {
     "harness": "./bin/harness"
