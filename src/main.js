@@ -3,6 +3,7 @@ import { Store } from './muscle/store.js';
 import { Muscle } from './muscle/index.js';
 import { complete, describeBrain } from './brain/index.js';
 import { heidesAvailable, runTurn } from './vessel/index.js';
+import { propose, attempt } from './curiosity/index.js';
 import { VERSION } from './version.js';
 
 export const HELP_LINES = [
@@ -14,6 +15,7 @@ export const HELP_LINES = [
   'remember TEXT: store a fact',
   'recall TEXT: find stored facts',
   'stats: show muscle stats',
+  'curious: propose plus attempt one learning step',
   'any other text runs one turn through muscle then brain',
 ];
 
@@ -82,6 +84,15 @@ export async function main(argv, opts = {}) {
     const muscle = new Muscle(store);
     const s = muscle.stats();
     say(`facts ${s.facts} | routes ${s.routes} | macros ${s.macros} | turns ${s.turns} | recalls ${s.recalls} | fast hits ${s.fastHits}`);
+    return 0;
+  }
+  if (cmd === 'curious') {
+    const store = new Store(storeDir);
+    const muscle = new Muscle(store);
+    const p = propose(muscle);
+    say(`curiosity target: ${p.target}`);
+    const res = await attempt(muscle, { complete }, p);
+    say(res.note);
     return 0;
   }
 
