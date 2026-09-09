@@ -9,6 +9,8 @@ import { startNode, linkPeer, delegateTask } from './mesh/index.js';
 import { deepCheck, stagedFile } from './vessel/verify.js';
 import { allowOrigin, denyOrigin, setQuorum, revokeOrigin, trustReport } from './skills/trust.js';
 import { watchLoop } from './sched/index.js';
+import { exportDistill, distillStats } from './sleep/index.js';
+import { webget, websearch } from './web/index.js';
 import { VERSION } from './version.js';
 
 export const HELP_LINES = [
@@ -36,6 +38,9 @@ export const HELP_LINES = [
   'trust quorum N: set votes needed',
   'revoke FP: roll back origin',
   'watch SECONDS: tick curiosity on interval',
+  'distill FILE: export sleep training pairs',
+  'webget URL: fetch page as text',
+  'websearch TEXT: search the web',
   'any other text runs one turn through muscle then brain',
 ];
 
@@ -222,6 +227,39 @@ export async function main(argv, opts = {}) {
     say(`watch every ${secs}s, ctrl c stops`);
     watchLoop({ muscle, brain: { complete }, intervalMs: secs * 1000, say });
     await new Promise(() => {});
+    return 0;
+  }
+  if (cmd === 'distill') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const stats = distillStats(muscle);
+    if (stats.pairs === 0) {
+      say('no traces yet, run turns first');
+      return 1;
+    }
+    const res = exportDistill(muscle, rest[0] || 'distill.jsonl');
+    say(`${res.note}: ${res.file}`);
+    return 0;
+  }
+  if (cmd === 'webget') {
+    const res = await webget(rest[0]);
+    if (!res.ok) {
+      say(res.note);
+      return 1;
+    }
+    if (res.title) say(`title: ${res.title}`);
+    say(res.text);
+    return 0;
+  }
+  if (cmd === 'websearch') {
+    const res = await websearch(rest.join(' '));
+    if (!res.ok) {
+      say(res.note);
+      return 1;
+    }
+    if (res.answer) say(res.answer);
+    if (res.hits.length === 0) say('no hits found');
+    for (const h of res.hits) say(`hit: ${h.title} | ${h.url}`);
     return 0;
   }
 

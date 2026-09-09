@@ -86,6 +86,26 @@ node ./bin/harness link 127.0.0.1 47397
 node ./bin/harness delegate 127.0.0.1 47397 check the workspace
 ```
 
+Sleep consolidation, so weights grow at rest:
+
+```bash
+# interaction: verified slow turns leave traces, facts ride along
+node ./bin/harness remember <fact>
+node ./bin/harness ponder <novel task>
+
+# rest: export pairs, train a LoRA adapter on charger power,
+# validate, promote only on green evals
+node ./bin/harness distill ./distill.jsonl
+```
+
+Web eyes:
+
+```bash
+node ./bin/harness webget https://example.com
+HARNESS_SEARCH=tavily TAVILY_API_KEY=... node ./bin/harness websearch <query>
+HARNESS_SEARCH=brave BRAVE_API_KEY=... node ./bin/harness websearch <query>
+```
+
 Grow while you sleep:
 
 ```bash
@@ -165,6 +185,9 @@ src/
   mesh/        TCP task mesh: serve, link, peers, delegate,
                pairing codes plus sealed caps
   sched/       daemon heartbeat: watch ticks curiosity
+  sleep/       rest time growth: trace log plus JSONL distill
+               export for LoRA sleep training
+  web/         outside eyes: page fetch plus search channels
 ```
 
 The turn loop:
@@ -191,8 +214,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    pairing codes plus sealed caps).
 5. Channels plus hardening: seven brain channels, deep verify, trust
    graph, macro fire, watch daemon, live 360M local proof (shipped).
-6. Next: encrypted caps transport beyond pairing, skill marketplace,
-   HEIDES staged gate on every macro fire.
+6. Growth plus web: recall rides into prompts, traces distill to
+   JSONL for sleep LoRA, page fetch plus two search channels (shipped).
+7. Next: sleep trainer reference job, skill marketplace, HEIDES
+   staged gate on every macro fire.
 
 ## Relation to HEIDES and VOLT
 

@@ -25,6 +25,14 @@ export function verifyGate(action) {
   return { pass: true, note: 'local verdict pass' };
 }
 
+export function logTrace(muscle, prompt, reply, tool) {
+  const traces = muscle.store.data.traces || [];
+  traces.push({ prompt: String(prompt || '').slice(0, 2000), reply: String(reply || '').slice(0, 2000), tool });
+  while (traces.length > 500) traces.shift();
+  muscle.store.data.traces = traces;
+  muscle.store.save();
+}
+
 export async function runTurn(input, deps) {
   const { muscle, brain } = deps;
   const text = String(input || '').trim();
@@ -56,13 +64,19 @@ export async function runTurn(input, deps) {
   }
 
   let out;
+  let prompt = text;
+  if (muscle.store.data.facts.length > 0) {
+    const known = muscle.recall(text, 2);
+    if (known.length > 0) prompt = `Known facts:\n${known.map((f) => `- ${f}`).join('\n')}\n\n${text}`;
+  }
   try {
-    out = await brain.complete(text);
+    out = await brain.complete(prompt);
   } catch (e) {
     return { path: 'slow', tool: null, reply: 'brain unreachable, nothing recorded' };
   }
   const verdict = verifyGate({ tool: out.tool, input: text });
   muscle.record({ intent: text, tool: out.tool || 'chat', ok: verdict.pass });
   if (!verdict.pass) return { path: 'slow', tool: out.tool || null, reply: 'brain output failed verify, muscle learned nothing' };
+  logTrace(muscle, text, out.text, out.tool || 'chat');
   return { path: 'slow', tool: out.tool || 'chat', reply: out.text };
 }
