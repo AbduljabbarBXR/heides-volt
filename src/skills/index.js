@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'n
 import { join } from 'node:path';
 import { generateKeyPairSync, sign, verify, createHash } from 'node:crypto';
 import { verifyGate } from '../vessel/index.js';
-import { policy } from './trust.js';
+import { policy, noteImport } from './trust.js';
 
 /**
  * skills/index.js: skills move, weights stay home.
@@ -97,7 +97,10 @@ export function importSkill(muscle, storeDir, file) {
   if (!skill.wins || skill.wins < 1) return { ok: false, note: 'skill carries no verified wins, import refused' };
   const fp = skill.origin || 'unknown';
   const pol = policy(muscle.store);
-  if (pol.denied.includes(fp)) return { ok: false, note: 'origin denied, import refused' };
+  if (pol.denied.includes(fp)) {
+    noteImport(muscle.store, fp, false);
+    return { ok: false, note: 'origin denied, import refused' };
+  }
   const routes = muscle.store.data.routes;
   const entry = routes[skill.tool] || { toks: [], reward: 0, wins: 0, runs: 0, held: 0, sources: {} };
   entry.sources = entry.sources || {};
@@ -123,6 +126,7 @@ export function importSkill(muscle, storeDir, file) {
   const data = muscle.store.data;
   data.origins = data.origins || {};
   data.origins[fp] = (data.origins[fp] || 0) + 1;
+  noteImport(muscle.store, fp, true);
   muscle.store.save();
   return { ok: true, note: `skill imported: ${skill.tool}${heldNote}` };
 }

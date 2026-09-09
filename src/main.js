@@ -43,9 +43,11 @@ export const HELP_LINES = [
   'trust allow FP: mark origin safe',
   'trust deny FP: block origin',
   'trust quorum N: set votes needed',
+  'repute: show origin track record',
   'revoke FP: roll back origin',
   'watch SECONDS: tick curiosity on interval',
   'daemon WSECS SLEEPTICKS: watch plus sleep in one loop',
+  'daemon WSECS SLEEPTICKS GOSSIP: plus gossip pulls',
   'sync HOST PORT CODE: pull peer shelf into muscle',
   'distill FILE: export sleep training pairs',
   'sleep: consolidate traces into adapter',
@@ -236,6 +238,17 @@ export async function main(argv, opts = {}) {
     for (const fp of fps) say(`origin ${fp}: ${rep.origins[fp]} import(s)`);
     return 0;
   }
+  if (cmd === 'repute') {
+    const store = new Store(storeDir || undefined);
+    const rep = trustReport(store);
+    const fps = Object.keys(rep.repute || {});
+    if (fps.length === 0) say('no track record yet');
+    for (const fp of fps) {
+      const r = rep.repute[fp];
+      say(`record ${fp}: ${r.imports} in, ${r.fails} failed, ${r.revokes} revoked`);
+    }
+    return 0;
+  }
   if (cmd === 'revoke') {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
@@ -256,8 +269,9 @@ export async function main(argv, opts = {}) {
     const muscle = new Muscle(store);
     const wsecs = Math.max(1, Math.floor(Number(rest[0]) || 60));
     const every = Math.max(1, Math.floor(Number(rest[1]) || 60));
-    say(`daemon watch ${wsecs}s sleep every ${every} ticks, ctrl c stops`);
-    daemonLoop({ muscle, brain: { complete }, watchMs: wsecs * 1000, sleepEvery: every, say });
+    const gossip = Math.max(0, Math.floor(Number(rest[2]) || 0));
+    say(`daemon watch ${wsecs}s sleep every ${every} ticks gossip ${gossip > 0 ? `every ${gossip}` : 'off'}, ctrl c stops`);
+    daemonLoop({ muscle, brain: { complete }, watchMs: wsecs * 1000, sleepEvery: every, gossipEvery: gossip, say });
     await new Promise(() => {});
     return 0;
   }
@@ -360,7 +374,7 @@ export async function main(argv, opts = {}) {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
     const res = muscle.prune();
-    say(`pruned ${res.traces} trace(s) plus ${res.facts} fact(s)`);
+    say(`pruned ${res.traces} trace(s) plus ${res.facts} fact(s) plus ${res.shelf} expired`);
     return 0;
   }
   if (cmd === 'boot') {

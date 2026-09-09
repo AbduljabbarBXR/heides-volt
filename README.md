@@ -126,6 +126,12 @@ node ./bin/harness pin 127.0.0.1 47397
 node ./bin/harness relays
 node ./bin/harness pull
 
+# gossip pulls only missing skills, entries expire in 30 days
+node ./bin/harness daemon 60 60 10
+
+# reputation: track record per origin, two revokes quarantine
+node ./bin/harness repute
+
 # one daemon: curiosity ticks plus sleep consolidation
 node ./bin/harness daemon 60 60
 node ./bin/harness adapter
@@ -229,8 +235,7 @@ src/
   web/         outside eyes: page fetch plus search channels
   skills/market.js named shelf: publish, market, fetch
   skills/relays.js pull network: pin, unpin, relays, pull
-  sched/       daemonLoop: watch plus sleep in one heartbeat
-  sched/power.js heat plus battery gate, pause plus resume episodes
+  sched/       daemonLoop: watch plus sleep plus gossip in one loop
   boot/        autostart recipes: systemd, launchd, Termux, cron
 ```
 
@@ -268,8 +273,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    pull network, autostart recipes for every platform (shipped).
 10. Phone hardening: atomic store with backup recovery, prune, heat
     plus battery gate in loops, Termux setup, offline audit (shipped).
-11. Next: gossip relays with reputation, provenance plus red team,
-    golden eval tracking.
+11. Gossip plus reputation: digest diff pulls, shelf TTL, origin track
+    record with auto quarantine, gossip ticks in daemon (shipped).
+12. Next: provenance plus red team, golden eval tracking, public
+    shelf relays.
 
 ## Relation to HEIDES and VOLT
 

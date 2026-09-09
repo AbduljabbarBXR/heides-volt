@@ -59,12 +59,38 @@ export function revokeOrigin(muscle, fp) {
     }
   }
   if (muscle.store.data.origins) delete muscle.store.data.origins[fp];
+  const rep = repute(muscle.store);
+  const entry = rep[fp] || { imports: 0, fails: 0, revokes: 0 };
+  entry.revokes += 1;
+  rep[fp] = entry;
+  let quarantined = '';
+  const pol = policy(muscle.store);
+  if (entry.revokes >= 2 && !pol.denied.includes(fp)) {
+    pol.denied.push(fp);
+    pol.allowed = pol.allowed.filter((x) => x !== fp);
+    savePolicy(muscle.store, pol);
+    quarantined = ', origin quarantined';
+  }
   muscle.store.save();
-  return { ok: true, note: `revoked ${touched} route(s)` };
+  return { ok: true, note: `revoked ${touched} route(s)${quarantined}` };
+}
+
+export function repute(store) {
+  if (!store.data.repute || typeof store.data.repute !== 'object') store.data.repute = {};
+  return store.data.repute;
+}
+
+export function noteImport(store, fp, ok) {
+  const rep = repute(store);
+  const entry = rep[fp] || { imports: 0, fails: 0, revokes: 0 };
+  if (ok) entry.imports += 1;
+  else entry.fails += 1;
+  rep[fp] = entry;
+  store.save();
 }
 
 export function trustReport(store) {
   const p = policy(store);
   const origins = store.data.origins || {};
-  return { quorum: p.quorum, allowed: p.allowed, denied: p.denied, origins };
+  return { quorum: p.quorum, allowed: p.allowed, denied: p.denied, origins, repute: repute(store) };
 }

@@ -121,8 +121,17 @@ export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', p
         send({ type: 'error', note: 'no shelf here' });
         return;
       }
-      const { listMarket } = await import('../skills/market.js');
-      send({ type: 'shelf', entries: listMarket(store).map((e) => ({ name: e.name, tool: e.tool, origin: e.origin })) });
+      const { liveShelf } = await import('../skills/market.js');
+      send({ type: 'shelf', entries: liveShelf(store).map((e) => ({ name: e.name, tool: e.tool, origin: e.origin })) });
+      return;
+    }
+    if (msg.type === 'digest') {
+      if (!store) {
+        send({ type: 'error', note: 'no shelf here' });
+        return;
+      }
+      const { shelfDigest } = await import('../skills/market.js');
+      send({ type: 'digest', entries: shelfDigest(store) });
       return;
     }
     if (msg.type === 'want') {
@@ -130,8 +139,8 @@ export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', p
         send({ type: 'error', note: 'no shelf here' });
         return;
       }
-      const { listMarket } = await import('../skills/market.js');
-      const entry = listMarket(store).find((e) => e.name === String(msg.name || ''));
+      const { liveShelf } = await import('../skills/market.js');
+      const entry = liveShelf(store).find((e) => e.name === String(msg.name || ''));
       if (!entry) {
         send({ type: 'error', note: 'unknown skill' });
         return;
@@ -238,4 +247,26 @@ export async function syncMarket(muscle, store, host, port, importer) {
     else refused += 1;
   }
   return { imported, refused, total: (list.entries || []).length };
+}
+
+export async function gossipMarket(muscle, store, host, port, importer) {
+  const code = peerCode(store, host, port);
+  const remote = await sendOnce(host, Number(port), { type: 'digest', code });
+  if (!remote || remote.type !== 'digest') throw new Error((remote && remote.note) || 'peer gave no digest');
+  const { liveShelf } = await import('../skills/market.js');
+  const have = new Set(liveShelf(store).map((e) => `${e.name}@${e.origin}`));
+  const missing = (remote.entries || []).filter((e) => !have.has(`${e.name}@${e.origin}`));
+  let imported = 0;
+  let refused = 0;
+  for (const entry of missing) {
+    const got = await sendOnce(host, Number(port), { type: 'want', name: entry.name, code });
+    if (!got || got.type !== 'skill') {
+      refused += 1;
+      continue;
+    }
+    const res = importer(entry, got.envelope);
+    if (res && res.ok) imported += 1;
+    else refused += 1;
+  }
+  return { imported, refused, total: missing.length };
 }

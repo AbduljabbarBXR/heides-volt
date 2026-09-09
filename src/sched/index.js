@@ -1,6 +1,7 @@
 import { propose, attempt } from '../curiosity/index.js';
 import { sleepCycle } from '../sleep/index.js';
 import { powerGate } from './power.js';
+import { pullAll } from '../skills/relays.js';
 
 function makePause() {
   let paused = false;
@@ -59,7 +60,7 @@ export function watchLoop({ muscle, brain, intervalMs = 60000, cwd = process.cwd
  * Every tick runs curiosity. Every sleepEvery ticks runs a
  * sleep cycle. Days look like learning, nights like growing.
  */
-export function daemonLoop({ muscle, brain, watchMs = 60000, sleepEvery = 60, cwd = process.cwd(), say = () => {}, power = () => powerGate() }) {
+export function daemonLoop({ muscle, brain, watchMs = 60000, sleepEvery = 60, gossipEvery = 0, cwd = process.cwd(), say = () => {}, power = () => powerGate() }) {
   let n = 0;
   let stopped = false;
   const pausedBy = makePause();
@@ -80,6 +81,14 @@ export function daemonLoop({ muscle, brain, watchMs = 60000, sleepEvery = 60, cw
         say(`daemon sleep: ${res.note}`);
       } catch (e) {
         say('daemon sleep: error seen, moving on');
+      }
+    }
+    if (gossipEvery > 0 && n % gossipEvery === 0) {
+      try {
+        const res = await pullAll(muscle, muscle.store);
+        say(`daemon gossip: ${res.imported} imported over ${res.reached} of ${res.targets}`);
+      } catch (e) {
+        say('daemon gossip: error seen, moving on');
       }
     }
   };

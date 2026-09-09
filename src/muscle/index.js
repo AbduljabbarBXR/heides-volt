@@ -113,7 +113,7 @@ export class Muscle {
     this.store.save();
   }
 
-  prune() {
+  prune(now = Date.now()) {
     const d = this.store.data;
     const tBefore = (d.traces || []).length;
     d.traces = (d.traces || []).slice(-100);
@@ -124,8 +124,10 @@ export class Muscle {
       .slice(0, 300)
       .map((x) => x.f);
     d.recent = (d.recent || []).slice(-8);
+    const mBefore = (d.market || []).length;
+    d.market = (d.market || []).filter((e) => !e.expires || e.expires > now);
     this.store.save();
-    return { traces: tBefore - d.traces.length, facts: fBefore - d.facts.length };
+    return { traces: tBefore - d.traces.length, facts: fBefore - d.facts.length, shelf: mBefore - d.market.length };
   }
 
   macroSuggest() {
