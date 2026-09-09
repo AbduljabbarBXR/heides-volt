@@ -41,9 +41,10 @@ test('trainer refuses unreadable dataset with contract json', () => {
 });
 
 test('dataset labels mirror inputs minus padding', () => {
+  const trainerDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'trainers', 'lora');
   const out = execFileSync(
     'python3',
-    ['-c', "import sys; sys.path.insert(0, 'trainers/lora'); import train; enc = {'input_ids': [[1, 2, 0, 0]], 'attention_mask': [[1, 1, 0, 0]]}; print(train.with_labels(enc)['labels'])"],
+    ['-c', `import sys; sys.path.insert(0, ${JSON.stringify(trainerDir)}); import train; enc = {'input_ids': [[1, 2, 0, 0]], 'attention_mask': [[1, 1, 0, 0]]}; print(train.with_labels(enc)['labels'])`],
     { encoding: 'utf8', timeout: 60000 }
   ).trim();
   assert.equal(out, '[[1, 2, -100, -100]]');
