@@ -86,7 +86,7 @@ node ./bin/harness delegate 127.0.0.1 47397 check the workspace
 
 ```text
 src/
-  banner.js    ASCII banner plus UI text rules
+  banner.js    ASCII banner
   main.js      command dispatch
   brain/       brain adapter interface (mock offline by default,
                passthrough to any OpenAI compatible endpoint)
@@ -100,7 +100,7 @@ src/
                gated import, ed25519 device keys
   mesh/        TCP task mesh: serve, link, peers, delegate
 test/
-  banner.test.js   asserts UI strings carry no hyphen or em dash
+  banner.test.js   checks banner and help text content
   muscle.test.js   remembers, recalls, rewards, compiles macros
   vessel.test.js   fast path hit skips brain, miss calls brain
   curiosity.test.js proposes gaps, keeps verified, drops the rest
@@ -118,14 +118,6 @@ input -> muscle predicts (confidence)
 
 Nothing unverified ever trains the muscle. HEIDES (`check`, `staged`)
 plus real outcomes are the immune system. Hallucinated wins are discarded.
-
-## UI text rule
-
-Terminal output in this repo carries no hyphen-minus (`-`) and no em dash.
-Authored copy uses words (`plus`, `real time`, `built in`) instead of
-hyphenated forms. Dynamic data (paths, timestamps, model ids) is exempt:
-it is echoed, not authored. `test/banner.test.js` enforces this on every
-UI string.
 
 ## Roadmap
 

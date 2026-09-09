@@ -9,12 +9,12 @@ import { loadBanner } from '../src/banner.js';
 const FORBIDDEN = ['-', '—', '–'];
 const here = dirname(fileURLToPath(import.meta.url));
 
-test('banner carries no hyphen or dash of any length', () => {
+test('banner content check', () => {
   const banner = loadBanner();
   for (const ch of FORBIDDEN) assert(!banner.includes(ch), `banner holds forbidden char ${JSON.stringify(ch)}`);
 });
 
-test('authored UI strings carry no hyphen or dash of any length', () => {
+test('authored UI strings content check', () => {
   for (const line of uiTexts()) {
     for (const ch of FORBIDDEN) assert(!line.includes(ch), `UI line holds forbidden char: ${line}`);
   }
