@@ -89,7 +89,7 @@ export function sendOnce(host, port, msg, timeoutMs = 15000) {
   });
 }
 
-export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', pairCode = null }) {
+export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', pairCode = null, store = null }) {
   const id = nodeId();
   const peers = new Map();
 
@@ -114,6 +114,34 @@ export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', p
     if (msg.type === 'delegate') {
       const res = await runTurn(String(msg.text || ''), { muscle, brain });
       send({ type: 'result', id: msg.id || null, reply: res.reply, path: res.path, tool: res.tool || null });
+      return;
+    }
+    if (msg.type === 'shelf') {
+      if (!store) {
+        send({ type: 'error', note: 'no shelf here' });
+        return;
+      }
+      const { listMarket } = await import('../skills/market.js');
+      send({ type: 'shelf', entries: listMarket(store).map((e) => ({ name: e.name, tool: e.tool, origin: e.origin })) });
+      return;
+    }
+    if (msg.type === 'want') {
+      if (!store) {
+        send({ type: 'error', note: 'no shelf here' });
+        return;
+      }
+      const { listMarket } = await import('../skills/market.js');
+      const entry = listMarket(store).find((e) => e.name === String(msg.name || ''));
+      if (!entry) {
+        send({ type: 'error', note: 'unknown skill' });
+        return;
+      }
+      try {
+        const { readFileSync } = await import('node:fs');
+        send({ type: 'skill', name: entry.name, envelope: JSON.parse(readFileSync(entry.file, 'utf8')) });
+      } catch {
+        send({ type: 'error', note: 'skill unreadable' });
+      }
       return;
     }
     send({ type: 'error', note: 'unknown message ignored' });
@@ -191,4 +219,23 @@ export async function delegateTask(muscle, host, port, text, store = null) {
   if (!res || res.type !== 'result') throw new Error((res && res.note) || 'peer gave no result');
   muscle.record({ intent: String(text || ''), tool: res.tool || 'chat', ok: true });
   return res;
+}
+
+export async function syncMarket(muscle, store, host, port, importer) {
+  const code = peerCode(store, host, port);
+  const list = await sendOnce(host, Number(port), { type: 'shelf', code });
+  if (!list || list.type !== 'shelf') throw new Error((list && list.note) || 'peer gave no shelf');
+  let imported = 0;
+  let refused = 0;
+  for (const entry of list.entries || []) {
+    const got = await sendOnce(host, Number(port), { type: 'want', name: entry.name, code });
+    if (!got || got.type !== 'skill') {
+      refused += 1;
+      continue;
+    }
+    const res = importer(entry, got.envelope);
+    if (res && res.ok) imported += 1;
+    else refused += 1;
+  }
+  return { imported, refused, total: (list.entries || []).length };
 }

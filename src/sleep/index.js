@@ -1,7 +1,7 @@
-import { writeFileSync } from 'node:fs';
-import { mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { trainAdapter, promoteAdapter } from './reference.js';
 
 /**
  * sleep/index.js: rest time growth.
@@ -44,8 +44,15 @@ export function sleepCycle(muscle, opts = {}) {
   mkdirSync(outDir, { recursive: true });
   const dataset = join(outDir, 'distill.jsonl');
   exportDistill(muscle, dataset);
-  const trainer = opts.trainer || process.env.HARNESS_TRAINER || null;
-  if (!trainer) return { ok: true, promoted: false, note: `dataset ready: ${stats.pairs} pair(s)`, file: dataset };
+  const trainer = opts.trainer !== undefined ? opts.trainer : process.env.HARNESS_TRAINER || 'builtin';
+  if (trainer === 'builtin') {
+    const trained = trainAdapter(muscle.store.data.traces || []);
+    if (!trained.ok) return { ok: true, promoted: false, note: trained.note };
+    if (trained.acc < trained.baseline) {
+      return { ok: true, promoted: false, note: `sleep kept old weights at ${trained.acc} under baseline ${trained.baseline}` };
+    }
+    return promoteAdapter(muscle, trained);
+  }
   let report;
   try {
     const out = execFileSync(trainer, [dataset, join(outDir, 'adapter')], {

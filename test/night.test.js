@@ -31,7 +31,7 @@ function chain(m, rounds) {
   }
 }
 
-test('sleep with no trainer leaves dataset ready', () => {
+test('sleep with too few pairs keeps weights', () => {
   const { dir, muscle } = fresh('harnessnightA');
   muscle.record({ intent: 'alpha beta gamma delta', tool: 'scan', ok: true });
   const brain = { complete: async () => ({ text: 'ok', tool: 'chat' }) };
@@ -39,7 +39,7 @@ test('sleep with no trainer leaves dataset ready', () => {
     const res = sleepCycle(muscle, { outDir: join(dir, 'sleep') });
     assert(res.ok);
     assert(!res.promoted);
-    assert.match(res.note, /dataset ready/);
+    assert.match(res.note, /too few pairs/);
   });
 });
 

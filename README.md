@@ -117,6 +117,14 @@ HARNESS_TRAINER=./train.sh node ./bin/harness sleep
 node ./bin/harness publish check
 node ./bin/harness market
 node ./bin/harness fetch check
+
+# pull a whole peer shelf over the mesh, trust still applies
+node ./bin/harness sync 127.0.0.1 47397
+
+# one daemon: curiosity ticks plus sleep consolidation
+node ./bin/harness daemon 60 60
+node ./bin/harness adapter
+node ./bin/harness adapter rollback
 ```
 
 Grow while you sleep:
@@ -201,8 +209,11 @@ src/
   sleep/       rest time growth: trace log plus JSONL distill
                export for LoRA sleep training, trainer pipeline
                with promote only on green evals
+  sleep/reference.js builtin phone side trainer: token weights,
+               held out eval, promote plus rollback
   web/         outside eyes: page fetch plus search channels
   skills/market.js named shelf: publish, market, fetch
+  sched/       daemonLoop: watch plus sleep in one heartbeat
 ```
 
 The turn loop:
@@ -233,8 +244,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    JSONL for sleep LoRA, page fetch plus two search channels (shipped).
 7. Night plus market: sleep pipeline with eval gated promote, named
    skill shelf, deep gate on macro fire (shipped).
-8. Next: sleep trainer reference job for real LoRA, skill marketplace
-   across devices, scheduled watch plus sleep in one daemon.
+8. Adapter plus sync plus daemon: builtin phone side trainer with
+   promote and rollback, shelf sync over mesh, unified daemon (shipped).
+9. Next: torch LoRA trainer job for big iron, public shelf relays,
+   scheduled daemon on boot.
 
 ## Relation to HEIDES and VOLT
 

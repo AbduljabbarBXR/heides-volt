@@ -1,4 +1,4 @@
-import { verifyGate } from '../vessel/index.js';
+import { verifyGate, logTrace } from '../vessel/index.js';
 import { deepCheck } from '../vessel/verify.js';
 
 /**
@@ -34,5 +34,6 @@ export async function attempt(muscle, brain, proposal, opts = {}) {
     if (!deep.pass) return { kept: false, note: deep.note };
   }
   muscle.record({ intent: proposal.practice, tool: out.tool || 'chat', ok: true });
+  logTrace(muscle, proposal.practice, out.text, out.tool || 'chat');
   return { kept: true, note: `attempt kept, muscle trained on ${out.tool || 'chat'}` };
 }

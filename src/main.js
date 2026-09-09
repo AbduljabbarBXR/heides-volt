@@ -5,11 +5,15 @@ import { complete, describeBrain } from './brain/index.js';
 import { heidesAvailable, runTurn } from './vessel/index.js';
 import { propose, attempt } from './curiosity/index.js';
 import { listSkills, exportSkill, importSkill } from './skills/index.js';
-import { startNode, linkPeer, delegateTask } from './mesh/index.js';
+import { startNode, linkPeer, delegateTask, syncMarket } from './mesh/index.js';
 import { deepCheck, stagedFile } from './vessel/verify.js';
 import { allowOrigin, denyOrigin, setQuorum, revokeOrigin, trustReport } from './skills/trust.js';
-import { watchLoop } from './sched/index.js';
+import { watchLoop, daemonLoop } from './sched/index.js';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { exportDistill, distillStats, sleepCycle } from './sleep/index.js';
+import { rollbackAdapter } from './sleep/reference.js';
 import { publishSkill, listMarket, fetchSkill } from './skills/market.js';
 import { webget, websearch } from './web/index.js';
 import { VERSION } from './version.js';
@@ -39,8 +43,12 @@ export const HELP_LINES = [
   'trust quorum N: set votes needed',
   'revoke FP: roll back origin',
   'watch SECONDS: tick curiosity on interval',
+  'daemon WSECS SLEEPTICKS: watch plus sleep in one loop',
+  'sync HOST PORT CODE: pull peer shelf into muscle',
   'distill FILE: export sleep training pairs',
   'sleep: consolidate traces into adapter',
+  'adapter: show active adapter',
+  'adapter rollback: restore previous adapter',
   'publish NAME: shelve proven skill',
   'market: list shelved skills',
   'fetch NAME: import skill by name',
@@ -151,7 +159,7 @@ export async function main(argv, opts = {}) {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
     const code = rest[1] || process.env.HARNESS_PAIR_CODE || null;
-    const node = await startNode({ muscle, brain: { complete }, port: rest[0] || 0, pairCode: code });
+    const node = await startNode({ muscle, brain: { complete }, port: rest[0] || 0, pairCode: code, store });
     say(`mesh node listening on ${node.host} port ${node.port}`);
     if (code) say('pairing on, code required');
     await new Promise(() => {});
@@ -234,6 +242,35 @@ export async function main(argv, opts = {}) {
     await new Promise(() => {});
     return 0;
   }
+  if (cmd === 'daemon') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const wsecs = Math.max(1, Math.floor(Number(rest[0]) || 60));
+    const every = Math.max(1, Math.floor(Number(rest[1]) || 60));
+    say(`daemon watch ${wsecs}s sleep every ${every} ticks, ctrl c stops`);
+    daemonLoop({ muscle, brain: { complete }, watchMs: wsecs * 1000, sleepEvery: every, say });
+    await new Promise(() => {});
+    return 0;
+  }
+  if (cmd === 'sync') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    try {
+      await linkPeer(muscle, store, rest[0], rest[1], rest[2] || process.env.HARNESS_PAIR_CODE || null);
+      const res = await syncMarket(muscle, store, rest[0], rest[1], (entry, envelope) => {
+        const dir = tmpdir();
+        mkdirSync(dir, { recursive: true });
+        const file = join(dir, `sync-${Date.now()}-${entry.name}.skill.json`);
+        writeFileSync(file, JSON.stringify(envelope), 'utf8');
+        return importSkill(muscle, store.dir, file);
+      });
+      say(`sync: ${res.imported} imported, ${res.refused} refused of ${res.total}`);
+    } catch (e) {
+      say(`sync failed: ${e.message}`);
+      return 1;
+    }
+    return 0;
+  }
   if (cmd === 'distill') {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
@@ -252,6 +289,18 @@ export async function main(argv, opts = {}) {
     const res = sleepCycle(muscle, {});
     say(res.file ? `${res.note}: ${res.file}` : res.note);
     return res.ok ? 0 : 1;
+  }
+  if (cmd === 'adapter') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    if (rest[0] === 'rollback') {
+      say(rollbackAdapter(muscle).note);
+      return 0;
+    }
+    const a = store.data.activeAdapter || null;
+    if (!a) say('no adapter yet, run sleep first');
+    else say(`adapter tools ${(a.tools || []).length} pairs ${a.pairs} score ${a.score}`);
+    return 0;
   }
   if (cmd === 'publish') {
     const store = new Store(storeDir || undefined);

@@ -1,3 +1,5 @@
+import { adapterBonus } from '../sleep/reference.js';
+
 /**
  * muscle/index.js: silent learner. tiny by design.
  *
@@ -76,9 +78,10 @@ export class Muscle {
 
   predictTool(intent) {
     const q = tokens(intent);
+    const adapter = this.store.data.activeAdapter || null;
     let best = null;
     for (const [tool, info] of Object.entries(this.store.data.routes)) {
-      const s = overlap(q, info.toks) + info.reward;
+      const s = overlap(q, info.toks) + info.reward + adapterBonus(adapter, tool, q);
       if (!best || s > best.score) best = { tool, score: s };
     }
     if (best && best.score >= 3) return { tool: best.tool, confidence: 'high' };
