@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync } from 'n
 import { join } from 'node:path';
 import { generateKeyPairSync, sign, verify, createHash } from 'node:crypto';
 import { verifyGate } from '../vessel/index.js';
+import { policy } from './trust.js';
 
 /**
  * skills/index.js: skills move, weights stay home.
@@ -94,16 +95,34 @@ export function importSkill(muscle, storeDir, file) {
   const verdict = verifyGate({ tool: skill.tool });
   if (!verdict.pass) return { ok: false, note: 'skill tool denied by policy, import refused' };
   if (!skill.wins || skill.wins < 1) return { ok: false, note: 'skill carries no verified wins, import refused' };
+  const fp = skill.origin || 'unknown';
+  const pol = policy(muscle.store);
+  if (pol.denied.includes(fp)) return { ok: false, note: 'origin denied, import refused' };
   const routes = muscle.store.data.routes;
-  const entry = routes[skill.tool] || { toks: [], reward: 0, wins: 0, runs: 0 };
+  const entry = routes[skill.tool] || { toks: [], reward: 0, wins: 0, runs: 0, held: 0, sources: {} };
+  entry.sources = entry.sources || {};
   for (const tok of skill.toks || []) if (!entry.toks.includes(tok)) entry.toks.push(tok);
+  const grant = Math.min(skill.wins, 2);
+  const distinct = new Set([...Object.keys(entry.sources), fp]).size;
   entry.wins += skill.wins;
   entry.runs += skill.wins;
-  entry.reward += Math.min(skill.wins, 2);
+  let heldNote = '';
+  if (pol.allowed.includes(fp) || distinct >= pol.quorum) {
+    const released = entry.held || 0;
+    entry.reward += released + grant;
+    entry.held = 0;
+    const prev = entry.sources[fp] || { wins: 0, granted: 0, held: 0 };
+    entry.sources[fp] = { wins: prev.wins + skill.wins, granted: (prev.granted || 0) + grant + released, held: 0 };
+  } else {
+    entry.held = (entry.held || 0) + grant;
+    const prev = entry.sources[fp] || { wins: 0, granted: 0, held: 0 };
+    entry.sources[fp] = { wins: prev.wins + skill.wins, granted: prev.granted || 0, held: (prev.held || 0) + grant };
+    heldNote = ', quorum not met, reward held';
+  }
   routes[skill.tool] = entry;
   const data = muscle.store.data;
   data.origins = data.origins || {};
-  data.origins[skill.origin || 'unknown'] = (data.origins[skill.origin || 'unknown'] || 0) + 1;
+  data.origins[fp] = (data.origins[fp] || 0) + 1;
   muscle.store.save();
-  return { ok: true, note: `skill imported: ${skill.tool}` };
+  return { ok: true, note: `skill imported: ${skill.tool}${heldNote}` };
 }

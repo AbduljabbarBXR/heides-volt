@@ -6,6 +6,9 @@ import { heidesAvailable, runTurn } from './vessel/index.js';
 import { propose, attempt } from './curiosity/index.js';
 import { listSkills, exportSkill, importSkill } from './skills/index.js';
 import { startNode, linkPeer, delegateTask } from './mesh/index.js';
+import { deepCheck, stagedFile } from './vessel/verify.js';
+import { allowOrigin, denyOrigin, setQuorum, revokeOrigin, trustReport } from './skills/trust.js';
+import { watchLoop } from './sched/index.js';
 import { VERSION } from './version.js';
 
 export const HELP_LINES = [
@@ -21,10 +24,18 @@ export const HELP_LINES = [
   'skills: list learned skills',
   'export NAME FILE: write signed skill file',
   'import FILE: verify plus merge skill file',
-  'serve PORT: start mesh node on loopback',
-  'link HOST PORT: connect a peer and swap caps',
+  'serve PORT CODE: start mesh node on loopback',
+  'link HOST PORT CODE: connect a peer and swap caps',
   'peers: list known peers',
   'delegate HOST PORT TEXT: run text on peer',
+  'verify: deep check workspace now',
+  'staged FILE: judge patch before apply',
+  'trust: show trust policy',
+  'trust allow FP: mark origin safe',
+  'trust deny FP: block origin',
+  'trust quorum N: set votes needed',
+  'revoke FP: roll back origin',
+  'watch SECONDS: tick curiosity on interval',
   'any other text runs one turn through muscle then brain',
 ];
 
@@ -129,8 +140,10 @@ export async function main(argv, opts = {}) {
   if (cmd === 'serve') {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
-    const node = await startNode({ muscle, brain: { complete }, port: rest[0] || 0 });
+    const code = rest[1] || process.env.HARNESS_PAIR_CODE || null;
+    const node = await startNode({ muscle, brain: { complete }, port: rest[0] || 0, pairCode: code });
     say(`mesh node listening on ${node.host} port ${node.port}`);
+    if (code) say('pairing on, code required');
     await new Promise(() => {});
     return 0;
   }
@@ -138,7 +151,7 @@ export async function main(argv, opts = {}) {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
     try {
-      const caps = await linkPeer(muscle, store, rest[0], rest[1]);
+      const caps = await linkPeer(muscle, store, rest[0], rest[1], rest[2] || process.env.HARNESS_PAIR_CODE || null);
       say(`peer linked: ${(caps.skills || []).length} skill(s) advertised`);
     } catch (e) {
       say(`link failed: ${e.message}`);
@@ -157,12 +170,58 @@ export async function main(argv, opts = {}) {
     const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
     try {
-      const res = await delegateTask(muscle, rest[0], rest[1], rest.slice(2).join(' '));
+      const res = await delegateTask(muscle, rest[0], rest[1], rest.slice(2).join(' '), store);
       say(res.reply);
     } catch (e) {
       say(`delegate failed: ${e.message}`);
       return 1;
     }
+    return 0;
+  }
+  if (cmd === 'verify') {
+    const res = deepCheck(process.cwd());
+    say(res.note);
+    return res.pass ? 0 : 1;
+  }
+  if (cmd === 'staged') {
+    const res = stagedFile(rest[0]);
+    say(res.output);
+    return res.ok ? 0 : 1;
+  }
+  if (cmd === 'trust') {
+    const store = new Store(storeDir || undefined);
+    if (rest[0] === 'allow' && rest[1]) {
+      say(allowOrigin(store, rest[1]).note);
+      return 0;
+    }
+    if (rest[0] === 'deny' && rest[1]) {
+      say(denyOrigin(store, rest[1]).note);
+      return 0;
+    }
+    if (rest[0] === 'quorum' && rest[1]) {
+      say(setQuorum(store, rest[1]).note);
+      return 0;
+    }
+    const rep = trustReport(store);
+    say(`quorum ${rep.quorum} | allowed ${rep.allowed.length} | denied ${rep.denied.length}`);
+    const fps = Object.keys(rep.origins);
+    if (fps.length === 0) say('no origins seen yet');
+    for (const fp of fps) say(`origin ${fp}: ${rep.origins[fp]} import(s)`);
+    return 0;
+  }
+  if (cmd === 'revoke') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    say(revokeOrigin(muscle, rest[0] || '').note);
+    return 0;
+  }
+  if (cmd === 'watch') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const secs = Math.max(1, Math.floor(Number(rest[0]) || 60));
+    say(`watch every ${secs}s, ctrl c stops`);
+    watchLoop({ muscle, brain: { complete }, intervalMs: secs * 1000, say });
+    await new Promise(() => {});
     return 0;
   }
 

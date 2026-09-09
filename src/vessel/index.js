@@ -30,6 +30,16 @@ export async function runTurn(input, deps) {
   const text = String(input || '').trim();
   if (!text) return { path: 'none', tool: null, reply: 'empty input ignored' };
 
+  const macro = muscle.macroSuggest();
+  if (macro) {
+    const verdict = verifyGate({ tool: macro, input: text });
+    if (verdict.pass) {
+      muscle.noteFastHit();
+      muscle.record({ intent: text, tool: macro, ok: true });
+      return { path: 'fast', tool: macro, reply: `macro fired ${macro} with zero brain call` };
+    }
+  }
+
   const guess = muscle.predictTool(text);
   if (guess.tool && guess.confidence === 'high') {
     const action = { tool: guess.tool, input: text };
@@ -45,7 +55,12 @@ export async function runTurn(input, deps) {
     }
   }
 
-  const out = await brain.complete(text);
+  let out;
+  try {
+    out = await brain.complete(text);
+  } catch (e) {
+    return { path: 'slow', tool: null, reply: 'brain unreachable, nothing recorded' };
+  }
   const verdict = verifyGate({ tool: out.tool, input: text });
   muscle.record({ intent: text, tool: out.tool || 'chat', ok: verdict.pass });
   if (!verdict.pass) return { path: 'slow', tool: out.tool || null, reply: 'brain output failed verify, muscle learned nothing' };

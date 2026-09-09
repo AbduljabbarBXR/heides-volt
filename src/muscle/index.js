@@ -79,6 +79,7 @@ export class Muscle {
   record({ intent, tool, ok }) {
     const t = String(tool || 'unknown');
     const entry = this.store.data.routes[t] || { toks: tokens(intent), reward: 0, wins: 0, runs: 0 };
+    entry.local = true;
     entry.runs += 1;
     if (ok) {
       entry.wins += 1;
@@ -97,6 +98,18 @@ export class Muscle {
   noteFastHit() {
     this.store.data.stats.fastHits += 1;
     this.store.save();
+  }
+
+  macroSuggest() {
+    const log = this.store.data.recent;
+    if (log.length < 2) return null;
+    const tail2 = log.slice(-2).join('>');
+    for (const [key, count] of Object.entries(this.store.data.macros)) {
+      if (count < 3) continue;
+      const parts = key.split('>');
+      if (parts.length === 3 && `${parts[0]}>${parts[1]}` === tail2) return parts[2];
+    }
+    return null;
   }
 
   compileChains(intent, tool, ok) {

@@ -1,36 +1,39 @@
 /**
  * brain/index.js: swappable reasoner interface.
  *
- * Default is mock, fully offline. Set env HARNESS_PROVIDER to
- * passthrough to any OpenAI compatible chat endpoint, else mock.
+ * Default is mock, fully offline. Set HARNESS_PROVIDER to pick
+ * a channel: openai, deepseek, openrouter, hf, anthropic,
+ * llama, ollama. HARNESS_MODEL and HARNESS_BASE_URL override.
  * The vessel never trusts raw brain output. Verify first.
  */
+import { resolveChannel, completeVia, mapTool } from './providers.js';
 
-export const BRAIN_VERSION = '0.1.0';
+export const BRAIN_VERSION = '0.2.0';
 
 export function describeBrain() {
-  if (process.env.HARNESS_PROVIDER) return `provider brain: ${process.env.HARNESS_PROVIDER}`;
-  return 'mock brain: offline, deterministic, built in';
+  try {
+    const ch = resolveChannel();
+    if (!ch) return 'mock brain: offline, deterministic, built in';
+    return `${ch.name} brain: ${ch.model || 'model from env'}`;
+  } catch (e) {
+    return `brain config issue: ${e.message}`;
+  }
 }
 
 export async function complete(prompt, opts = {}) {
   const text = String(prompt || '');
-  if (process.env.HARNESS_PROVIDER) {
-    return {
-      text: `provider echo (${text.slice(0, 80)})`,
-      tool: null,
-      note: 'passthrough stub, wire a real endpoint here',
-    };
+  let ch = null;
+  try {
+    ch = resolveChannel();
+  } catch (e) {
+    throw new Error(`brain unreachable: ${e.message}`);
   }
-  const low = text.toLowerCase();
-  let tool = 'chat';
-  if (low.includes('scan') || low.includes('map')) tool = 'scan';
-  else if (low.includes('check') || low.includes('review')) tool = 'check';
-  else if (low.includes('remember') || low.includes('note')) tool = 'remember';
-  else if (low.includes('recall') || low.includes('find')) tool = 'recall';
-  return {
-    text: `mock understood: ${text.slice(0, 120)}`,
-    tool,
-    note: 'slow path used, muscle will learn this',
-  };
+  if (!ch) {
+    return { text: `mock understood: ${text.slice(0, 120)}`, tool: mapTool(text), note: 'slow path used, muscle will learn this' };
+  }
+  try {
+    return await completeVia(ch, text, opts);
+  } catch (e) {
+    throw new Error(`brain unreachable: ${e.message}`);
+  }
 }

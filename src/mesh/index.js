@@ -1,5 +1,5 @@
 import { createServer, createConnection } from 'node:net';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, scryptSync, createCipheriv, createDecipheriv, timingSafeEqual } from 'node:crypto';
 import { runTurn } from '../vessel/index.js';
 import { listSkills } from '../skills/index.js';
 import { describeBrain } from '../brain/index.js';
@@ -20,6 +20,30 @@ import { describeBrain } from '../brain/index.js';
 
 export function nodeId() {
   return randomBytes(4).toString('hex');
+}
+
+export function codesMatch(a, b) {
+  const ba = Buffer.from(String(a || ''));
+  const bb = Buffer.from(String(b || ''));
+  if (ba.length !== bb.length || ba.length === 0) return false;
+  return timingSafeEqual(ba, bb);
+}
+
+export function sealCaps(caps, code) {
+  const salt = randomBytes(8);
+  const key = scryptSync(String(code), salt, 32);
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  const data = Buffer.concat([cipher.update(JSON.stringify(caps), 'utf8'), cipher.final()]);
+  return { salt: salt.toString('hex'), iv: iv.toString('hex'), data: data.toString('hex'), tag: cipher.getAuthTag().toString('hex') };
+}
+
+export function unsealCaps(sealed, code) {
+  const key = scryptSync(String(code), Buffer.from(sealed.salt, 'hex'), 32);
+  const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(sealed.iv, 'hex'));
+  decipher.setAuthTag(Buffer.from(sealed.tag, 'hex'));
+  const plain = Buffer.concat([decipher.update(Buffer.from(sealed.data, 'hex')), decipher.final()]).toString('utf8');
+  return JSON.parse(plain);
 }
 
 export function advertise(muscle, id) {
@@ -65,7 +89,7 @@ export function sendOnce(host, port, msg, timeoutMs = 15000) {
   });
 }
 
-export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1' }) {
+export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1', pairCode = null }) {
   const id = nodeId();
   const peers = new Map();
 
@@ -75,9 +99,16 @@ export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1' })
       send({ type: 'error', note: 'bad message ignored' });
       return;
     }
+    if (pairCode && !codesMatch(msg.code, pairCode)) {
+      send({ type: 'error', note: 'pair code refused' });
+      return;
+    }
     if (msg.type === 'hello') {
       if (msg.caps && msg.caps.id) peers.set(msg.caps.id, { caps: msg.caps });
-      send({ type: 'welcome', caps: advertise(muscle, id) });
+      const caps = advertise(muscle, id);
+      const welcome = { type: 'welcome', caps };
+      if (pairCode) welcome.sealed = sealCaps(caps, pairCode);
+      send(welcome);
       return;
     }
     if (msg.type === 'delegate') {
@@ -116,9 +147,16 @@ export async function startNode({ muscle, brain, port = 0, host = '127.0.0.1' })
   };
 }
 
-export async function linkPeer(muscle, store, host, port) {
-  const res = await sendOnce(host, Number(port), { type: 'hello', caps: advertise(muscle, 'guest') });
-  if (!res || res.type !== 'welcome') throw new Error('peer refused hello');
+export async function linkPeer(muscle, store, host, port, code = null) {
+  const res = await sendOnce(host, Number(port), { type: 'hello', caps: advertise(muscle, 'guest'), code });
+  if (!res || res.type !== 'welcome') throw new Error((res && res.note) || 'peer refused hello');
+  if (res.sealed) {
+    try {
+      unsealCaps(res.sealed, code);
+    } catch {
+      throw new Error('peer proof failed');
+    }
+  }
   const peers = store.data.peers || [];
   const known = peers.find((p) => p.host === host && Number(p.port) === Number(port));
   const entry = {
@@ -126,6 +164,7 @@ export async function linkPeer(muscle, store, host, port) {
     port: Number(port),
     id: res.caps.id,
     skills: res.caps.skills || [],
+    code: code || null,
     seen: Date.now(),
   };
   if (known) Object.assign(known, entry);
@@ -135,13 +174,21 @@ export async function linkPeer(muscle, store, host, port) {
   return res.caps;
 }
 
-export async function delegateTask(muscle, host, port, text) {
+function peerCode(store, host, port) {
+  const peers = store.data.peers || [];
+  const known = peers.find((p) => p.host === host && Number(p.port) === Number(port));
+  return (known && known.code) || null;
+}
+
+export async function delegateTask(muscle, host, port, text, store = null) {
+  const code = store ? peerCode(store, host, port) : null;
   const res = await sendOnce(host, Number(port), {
     type: 'delegate',
     id: nodeId(),
     text: String(text || ''),
+    code,
   });
-  if (!res || res.type !== 'result') throw new Error('peer gave no result');
+  if (!res || res.type !== 'result') throw new Error((res && res.note) || 'peer gave no result');
   muscle.record({ intent: String(text || ''), tool: res.tool || 'chat', ok: true });
   return res;
 }

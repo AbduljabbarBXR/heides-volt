@@ -1,4 +1,5 @@
 import { verifyGate } from '../vessel/index.js';
+import { deepCheck } from '../vessel/verify.js';
 
 /**
  * curiosity/index.js: the drive. proposes what to learn next,
@@ -24,10 +25,14 @@ export function propose(muscle) {
   return { target: 'macros', practice: 'repeat the most useful chain to compile it' };
 }
 
-export async function attempt(muscle, brain, proposal) {
+export async function attempt(muscle, brain, proposal, opts = {}) {
   const out = await brain.complete(proposal.practice);
   const verdict = verifyGate({ tool: out.tool, input: proposal.practice });
   if (!verdict.pass) return { kept: false, note: 'attempt discarded, verify failed' };
+  if (opts.deep !== false) {
+    const deep = deepCheck(opts.cwd || process.cwd());
+    if (!deep.pass) return { kept: false, note: deep.note };
+  }
   muscle.record({ intent: proposal.practice, tool: out.tool || 'chat', ok: true });
   return { kept: true, note: `attempt kept, muscle trained on ${out.tool || 'chat'}` };
 }
