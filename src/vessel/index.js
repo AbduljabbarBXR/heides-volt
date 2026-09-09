@@ -25,9 +25,9 @@ export function verifyGate(action) {
   return { pass: true, note: 'local verdict pass' };
 }
 
-export function logTrace(muscle, prompt, reply, tool) {
+export function logTrace(muscle, prompt, reply, tool, prov = 'local') {
   const traces = muscle.store.data.traces || [];
-  traces.push({ prompt: String(prompt || '').slice(0, 2000), reply: String(reply || '').slice(0, 2000), tool });
+  traces.push({ prompt: String(prompt || '').slice(0, 2000), reply: String(reply || '').slice(0, 2000), tool, prov });
   while (traces.length > 500) traces.shift();
   muscle.store.data.traces = traces;
   muscle.store.save();

@@ -16,13 +16,14 @@ import { trainAdapter, promoteAdapter } from './reference.js';
 
 export function distillStats(muscle) {
   const traces = muscle.store.data.traces || [];
+  const local = traces.filter((t) => (t.prov || 'local') === 'local');
   const byTool = {};
-  for (const t of traces) byTool[t.tool || 'chat'] = (byTool[t.tool || 'chat'] || 0) + 1;
-  return { pairs: traces.length, byTool };
+  for (const t of local) byTool[t.tool || 'chat'] = (byTool[t.tool || 'chat'] || 0) + 1;
+  return { pairs: local.length, skipped: traces.length - local.length, byTool };
 }
 
 export function exportDistill(muscle, file = 'distill.jsonl') {
-  const traces = muscle.store.data.traces || [];
+  const traces = (muscle.store.data.traces || []).filter((t) => (t.prov || 'local') === 'local');
   const lines = traces.map((t) => JSON.stringify({ prompt: t.prompt, completion: t.reply, tool: t.tool || 'chat' }));
   writeFileSync(file, lines.length > 0 ? lines.join('\n') + '\n' : '', 'utf8');
   return { ok: true, note: `wrote ${lines.length} pair(s)`, file, pairs: lines.length };

@@ -13,7 +13,9 @@ import { tokens } from '../muscle/index.js';
  */
 
 export function trainAdapter(traces) {
-  const data = (traces || []).map((t) => ({ toks: tokens(t.prompt), tool: t.tool || 'chat' }));
+  const data = (traces || [])
+    .filter((t) => (t.prov || 'local') === 'local')
+    .map((t) => ({ toks: tokens(t.prompt), tool: t.tool || 'chat' }));
   if (data.length < 4) return { ok: false, note: 'too few pairs, kept old weights' };
   const cut = Math.max(1, Math.floor(data.length * 0.8));
   const train = data.slice(0, cut);

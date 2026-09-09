@@ -144,6 +144,9 @@ node ./bin/harness boot install
 # phone care: atomic store with backup, trim cold weight
 node ./bin/harness prune
 
+# golden evals track whether the resident learns
+node ./bin/harness eval
+
 # Termux fresh install
 bash scripts/termux-setup.sh
 ```
@@ -236,7 +239,9 @@ src/
   skills/market.js named shelf: publish, market, fetch
   skills/relays.js pull network: pin, unpin, relays, pull
   sched/       daemonLoop: watch plus sleep plus gossip in one loop
+  sched/power.js heat plus battery gate, pause plus resume episodes
   boot/        autostart recipes: systemd, launchd, Termux, cron
+  eval/        golden tasks plus score history
 ```
 
 The turn loop:
@@ -275,8 +280,9 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
     plus battery gate in loops, Termux setup, offline audit (shipped).
 11. Gossip plus reputation: digest diff pulls, shelf TTL, origin track
     record with auto quarantine, gossip ticks in daemon (shipped).
-12. Next: provenance plus red team, golden eval tracking, public
-    shelf relays.
+12. Provenance plus evals: local, peer and web tags, peer traces kept
+    out of distill, red team suite, golden eval tracking (shipped).
+13. Next: 1.0 release with installers, changelog, license audit.
 
 ## Relation to HEIDES and VOLT
 

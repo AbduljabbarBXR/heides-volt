@@ -1,6 +1,6 @@
 import { createServer, createConnection } from 'node:net';
 import { randomBytes, scryptSync, createCipheriv, createDecipheriv, timingSafeEqual } from 'node:crypto';
-import { runTurn } from '../vessel/index.js';
+import { runTurn, logTrace } from '../vessel/index.js';
 import { listSkills } from '../skills/index.js';
 import { describeBrain } from '../brain/index.js';
 
@@ -227,6 +227,7 @@ export async function delegateTask(muscle, host, port, text, store = null) {
   });
   if (!res || res.type !== 'result') throw new Error((res && res.note) || 'peer gave no result');
   muscle.record({ intent: String(text || ''), tool: res.tool || 'chat', ok: true });
+  logTrace(muscle, String(text || ''), res.reply, res.tool || 'chat', 'peer');
   return res;
 }
 

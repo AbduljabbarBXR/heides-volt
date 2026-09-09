@@ -44,7 +44,7 @@ export class Muscle {
     this.store = store;
   }
 
-  remember(fact) {
+  remember(fact, prov = 'local') {
     const text = String(fact || '').trim();
     if (!text) return { ok: false, note: 'empty fact ignored' };
     const facts = this.store.data.facts;
@@ -54,7 +54,7 @@ export class Muscle {
       this.store.save();
       return { ok: true, note: 'fact already known, count raised' };
     }
-    facts.push({ text, toks: tokens(text), uses: 0, reward: 0, seen: 1 });
+    facts.push({ text, toks: tokens(text), uses: 0, reward: 0, seen: 1, prov });
     this.store.save();
     return { ok: true, note: 'fact stored' };
   }
@@ -159,6 +159,12 @@ export class Muscle {
 
   stats() {
     const d = this.store.data;
+    const prov = { local: 0, peer: 0, web: 0 };
+    for (const f of d.facts) {
+      const p = f.prov || 'local';
+      if (prov[p] === undefined) prov[p] = 0;
+      prov[p] += 1;
+    }
     return {
       facts: d.facts.length,
       routes: Object.keys(d.routes).length,
@@ -166,6 +172,7 @@ export class Muscle {
       turns: d.stats.turns,
       recalls: d.stats.recalls,
       fastHits: d.stats.fastHits,
+      prov,
     };
   }
 }

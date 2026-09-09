@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { exportDistill, distillStats, sleepCycle } from './sleep/index.js';
 import { rollbackAdapter } from './sleep/reference.js';
 import { publishSkill, listMarket, fetchSkill } from './skills/market.js';
+import { runEval } from './eval/index.js';
 import { pinRelay, unpinRelay, relays, pullAll } from './skills/relays.js';
 import { detectPlatform, bootTarget, installBoot, cronLine } from './boot/index.js';
 import { webget, websearch } from './web/index.js';
@@ -63,6 +64,7 @@ export const HELP_LINES = [
   'prune: trim traces plus cold facts',
   'boot: show autostart recipe',
   'boot install: write autostart file',
+  'eval: score golden tasks',
   'webget URL: fetch page as text',
   'websearch TEXT: search the web',
   'any other text runs one turn through muscle then brain',
@@ -129,10 +131,17 @@ export async function main(argv, opts = {}) {
     return 0;
   }
   if (cmd === 'stats') {
-    const store = new Store(storeDir);
+    const store = new Store(storeDir || undefined);
     const muscle = new Muscle(store);
     const s = muscle.stats();
-    say(`facts ${s.facts} | routes ${s.routes} | macros ${s.macros} | turns ${s.turns} | recalls ${s.recalls} | fast hits ${s.fastHits}`);
+    say(`facts ${s.facts} | routes ${s.routes} | macros ${s.macros} | turns ${s.turns} | recalls ${s.recalls} | fast hits ${s.fastHits} | prov local ${s.prov.local} peer ${s.prov.peer} web ${s.prov.web}`);
+    return 0;
+  }
+  if (cmd === 'eval') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = runEval(muscle);
+    say(`eval ${res.score} of ${res.total}, trend ${res.trend}`);
     return 0;
   }
   if (cmd === 'curious') {
