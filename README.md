@@ -39,7 +39,7 @@ node ./bin/harness demo
 node ./bin/harness help
 ```
 
-Available commands (subcommands, no flags needed):
+All commands (subcommands, no flags needed):
 
 ```bash
 node ./bin/harness help
@@ -49,6 +49,37 @@ node ./bin/harness demo
 node ./bin/harness remember <fact>
 node ./bin/harness recall <query>
 node ./bin/harness stats
+node ./bin/harness curious
+node ./bin/harness skills
+node ./bin/harness export <name> [file]
+node ./bin/harness import <file>
+node ./bin/harness serve [port]
+node ./bin/harness link <host> <port>
+node ./bin/harness peers
+node ./bin/harness delegate <host> <port> <text>
+```
+
+Share a skill between two devices:
+
+```bash
+# device A: train through normal turns, then export
+node ./bin/harness check
+node ./bin/harness export check ./check.skill.json
+
+# device B: verify and merge, then use with zero brain calls
+node ./bin/harness import ./check.skill.json
+node ./bin/harness check
+```
+
+Delegate a turn to a peer on the local network:
+
+```bash
+# device B: serve (loopback by default, LAN host only on trusted nets)
+node ./bin/harness serve 47397
+
+# device A: link once, then delegate any turn
+node ./bin/harness link 127.0.0.1 47397
+node ./bin/harness delegate 127.0.0.1 47397 check the workspace
 ```
 
 ## Architecture
@@ -63,10 +94,18 @@ src/
                HEIDES verify gate, silent record
   muscle/      router plus recall ranker plus chain compiler,
                JSON persisted under OS config dir
+  curiosity/   drive: propose weakest point, attempt, keep
+               only on verify pass
+  skills/      signed 4 KB skill files, export plus verify
+               gated import, ed25519 device keys
+  mesh/        TCP task mesh: serve, link, peers, delegate
 test/
   banner.test.js   asserts UI strings carry no hyphen or em dash
   muscle.test.js   remembers, recalls, rewards, compiles macros
   vessel.test.js   fast path hit skips brain, miss calls brain
+  curiosity.test.js proposes gaps, keeps verified, drops the rest
+  skills.test.js   roundtrip teaches, tamper and destructive refused
+  mesh.test.js     caps swap, delegate teaches, dead peer clean
 ```
 
 The turn loop:
@@ -91,12 +130,16 @@ UI string.
 ## Roadmap
 
 1. v0.1 vessel skeleton: mock brain, muscle with JSON store, verify stub,
-   HEIDES CLI passthrough when present (this commit).
+   HEIDES CLI passthrough when present (shipped).
 2. Curiosity loop: scheduler proposes a skill, tries it sandboxed, keeps it
-   only on verify pass.
-3. Skill exchange: signed 4 KB skill files shared peer to peer, not weights.
-4. Mesh: capability advertisement and delegation across phones (task
-   parallelism, never tensor parallelism).
+   only on verify pass (shipped).
+3. Skill exchange: signed 4 KB skill files shared peer to peer, not weights
+   (shipped).
+4. Mesh: capability advertisement and delegation across phones, task
+   parallelism, never tensor parallelism (shipped, loopback by default,
+   plain text wire in v1).
+5. Next: encrypted wire, real brain endpoint, HEIDES deep verify,
+   skill marketplace with trust graph.
 
 ## Relation to HEIDES and VOLT
 
