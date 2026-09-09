@@ -52,7 +52,7 @@ test('watch ticks learn and stop ends loop', async () => {
   const m = fresh('harnesswatchA');
   const brain = { complete: async () => ({ text: 'ok', tool: 'chat' }) };
   const lines = [];
-  const stop = watchLoop({ muscle: m, brain, intervalMs: 30, cwd: '/tmp', say: (s) => lines.push(s) });
+  const stop = watchLoop({ muscle: m, brain, intervalMs: 30, cwd: '/tmp', say: (s) => lines.push(s), power: () => ({ ok: true }) });
   await new Promise((r) => setTimeout(r, 120));
   stop();
   const count = lines.length;

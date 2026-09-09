@@ -134,6 +134,12 @@ node ./bin/harness adapter rollback
 # autostart the daemon on boot
 node ./bin/harness boot
 node ./bin/harness boot install
+
+# phone care: atomic store with backup, trim cold weight
+node ./bin/harness prune
+
+# Termux fresh install
+bash scripts/termux-setup.sh
 ```
 
 Grow while you sleep:
@@ -224,6 +230,7 @@ src/
   skills/market.js named shelf: publish, market, fetch
   skills/relays.js pull network: pin, unpin, relays, pull
   sched/       daemonLoop: watch plus sleep in one heartbeat
+  sched/power.js heat plus battery gate, pause plus resume episodes
   boot/        autostart recipes: systemd, launchd, Termux, cron
 ```
 
@@ -259,8 +266,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    promote and rollback, shelf sync over mesh, unified daemon (shipped).
 9. Iron plus relays plus boot: torch LoRA reference job, pinned relay
    pull network, autostart recipes for every platform (shipped).
-10. Next: public shelf relays with gossip, torch soak run on CUDA,
-    daemon health endpoint.
+10. Phone hardening: atomic store with backup recovery, prune, heat
+    plus battery gate in loops, Termux setup, offline audit (shipped).
+11. Next: gossip relays with reputation, provenance plus red team,
+    golden eval tracking.
 
 ## Relation to HEIDES and VOLT
 

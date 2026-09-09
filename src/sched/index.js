@@ -1,5 +1,25 @@
 import { propose, attempt } from '../curiosity/index.js';
 import { sleepCycle } from '../sleep/index.js';
+import { powerGate } from './power.js';
+
+function makePause() {
+  let paused = false;
+  return (power, say) => {
+    const gate = power();
+    if (!gate.ok) {
+      if (!paused) {
+        paused = true;
+        say(gate.note);
+      }
+      return true;
+    }
+    if (paused) {
+      paused = false;
+      say('power ok, resuming');
+    }
+    return false;
+  };
+}
 
 /**
  * sched/index.js: the daemon heartbeat.
@@ -9,11 +29,13 @@ import { sleepCycle } from '../sleep/index.js';
  * Returns a stop function. CLI keeps alive until killed.
  */
 
-export function watchLoop({ muscle, brain, intervalMs = 60000, cwd = process.cwd(), say = () => {} }) {
+export function watchLoop({ muscle, brain, intervalMs = 60000, cwd = process.cwd(), say = () => {}, power = () => powerGate() }) {
   let n = 0;
   let stopped = false;
+  const pausedBy = makePause();
   const tick = async () => {
     if (stopped) return;
+    if (pausedBy(power, say)) return;
     n += 1;
     try {
       const p = propose(muscle);
@@ -37,11 +59,13 @@ export function watchLoop({ muscle, brain, intervalMs = 60000, cwd = process.cwd
  * Every tick runs curiosity. Every sleepEvery ticks runs a
  * sleep cycle. Days look like learning, nights like growing.
  */
-export function daemonLoop({ muscle, brain, watchMs = 60000, sleepEvery = 60, cwd = process.cwd(), say = () => {} }) {
+export function daemonLoop({ muscle, brain, watchMs = 60000, sleepEvery = 60, cwd = process.cwd(), say = () => {}, power = () => powerGate() }) {
   let n = 0;
   let stopped = false;
+  const pausedBy = makePause();
   const tick = async () => {
     if (stopped) return;
+    if (pausedBy(power, say)) return;
     n += 1;
     try {
       const p = propose(muscle);

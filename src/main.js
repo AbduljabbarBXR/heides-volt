@@ -58,6 +58,7 @@ export const HELP_LINES = [
   'unpin HOST PORT: drop relay',
   'relays: list pinned relays',
   'pull: sync every relay plus peer',
+  'prune: trim traces plus cold facts',
   'boot: show autostart recipe',
   'boot install: write autostart file',
   'webget URL: fetch page as text',
@@ -353,6 +354,13 @@ export async function main(argv, opts = {}) {
     const muscle = new Muscle(store);
     const res = await pullAll(muscle, store);
     say(`pull: ${res.imported} imported, ${res.refused} refused over ${res.reached} of ${res.targets}`);
+    return 0;
+  }
+  if (cmd === 'prune') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = muscle.prune();
+    say(`pruned ${res.traces} trace(s) plus ${res.facts} fact(s)`);
     return 0;
   }
   if (cmd === 'boot') {

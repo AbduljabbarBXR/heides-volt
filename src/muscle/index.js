@@ -113,6 +113,21 @@ export class Muscle {
     this.store.save();
   }
 
+  prune() {
+    const d = this.store.data;
+    const tBefore = (d.traces || []).length;
+    d.traces = (d.traces || []).slice(-100);
+    const fBefore = d.facts.length;
+    d.facts = d.facts
+      .map((f) => ({ f, s: (f.uses || 0) + (f.reward || 0) }))
+      .sort((a, b) => b.s - a.s)
+      .slice(0, 300)
+      .map((x) => x.f);
+    d.recent = (d.recent || []).slice(-8);
+    this.store.save();
+    return { traces: tBefore - d.traces.length, facts: fBefore - d.facts.length };
+  }
+
   macroSuggest() {
     const log = this.store.data.recent;
     if (log.length < 2) return null;

@@ -72,7 +72,7 @@ test('sync against empty shelf imports nothing', async (t) => {
 test('daemon ticks curiosity and sleeps on schedule', async () => {
   const { muscle } = fresh('harnessdaemonA');
   const lines = [];
-  const stop = daemonLoop({ muscle, brain, watchMs: 30, sleepEvery: 2, cwd: '/tmp', say: (s) => lines.push(s) });
+  const stop = daemonLoop({ muscle, brain, watchMs: 30, sleepEvery: 2, cwd: '/tmp', say: (s) => lines.push(s), power: () => ({ ok: true }) });
   await new Promise((r) => setTimeout(r, 200));
   stop();
   assert(lines.some((l) => l.startsWith('daemon tick')), `no ticks in ${JSON.stringify(lines)}`);
