@@ -15,6 +15,8 @@ import { tmpdir } from 'node:os';
 import { exportDistill, distillStats, sleepCycle } from './sleep/index.js';
 import { rollbackAdapter } from './sleep/reference.js';
 import { publishSkill, listMarket, fetchSkill } from './skills/market.js';
+import { pinRelay, unpinRelay, relays, pullAll } from './skills/relays.js';
+import { detectPlatform, bootTarget, installBoot, cronLine } from './boot/index.js';
 import { webget, websearch } from './web/index.js';
 import { VERSION } from './version.js';
 
@@ -52,6 +54,12 @@ export const HELP_LINES = [
   'publish NAME: shelve proven skill',
   'market: list shelved skills',
   'fetch NAME: import skill by name',
+  'pin HOST PORT CODE: pin relay',
+  'unpin HOST PORT: drop relay',
+  'relays: list pinned relays',
+  'pull: sync every relay plus peer',
+  'boot: show autostart recipe',
+  'boot install: write autostart file',
   'webget URL: fetch page as text',
   'websearch TEXT: search the web',
   'any other text runs one turn through muscle then brain',
@@ -322,6 +330,46 @@ export async function main(argv, opts = {}) {
     const res = fetchSkill(muscle, store, rest[0]);
     say(res.note);
     return res.ok ? 0 : 1;
+  }
+  if (cmd === 'pin') {
+    const store = new Store(storeDir || undefined);
+    say(pinRelay(store, rest[0], rest[1], rest[2] || process.env.HARNESS_PAIR_CODE || null).note);
+    return 0;
+  }
+  if (cmd === 'unpin') {
+    const store = new Store(storeDir || undefined);
+    say(unpinRelay(store, rest[0], rest[1]).note);
+    return 0;
+  }
+  if (cmd === 'relays') {
+    const store = new Store(storeDir || undefined);
+    const list = relays(store);
+    if (list.length === 0) say('no relays pinned yet');
+    for (const r of list) say(`relay ${r.host} port ${r.port}`);
+    return 0;
+  }
+  if (cmd === 'pull') {
+    const store = new Store(storeDir || undefined);
+    const muscle = new Muscle(store);
+    const res = await pullAll(muscle, store);
+    say(`pull: ${res.imported} imported, ${res.refused} refused over ${res.reached} of ${res.targets}`);
+    return 0;
+  }
+  if (cmd === 'boot') {
+    const kind = detectPlatform();
+    if (rest[0] === 'install') {
+      const argv1 = process.argv[1] || 'harness';
+      const root = argv1.endsWith('harness') ? argv1.split('/').slice(0, -2).join('/') || '/' : null;
+      const res = installBoot({ kind, home: process.env.HOME || undefined, bin: argv1, root });
+      say(res.note);
+      if (res.hint) say(res.hint);
+      return res.ok ? 0 : 1;
+    }
+    const target = bootTarget(kind);
+    say(`platform ${kind}`);
+    if (target) say(`recipe target: ${target}`);
+    else say(`cron recipe: ${cronLine('harness daemon 60 60')}`);
+    return 0;
   }
   if (cmd === 'webget') {
     const res = await webget(rest[0]);

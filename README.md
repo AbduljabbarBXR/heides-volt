@@ -121,10 +121,19 @@ node ./bin/harness fetch check
 # pull a whole peer shelf over the mesh, trust still applies
 node ./bin/harness sync 127.0.0.1 47397
 
+# pin relays once, pull them all with one command
+node ./bin/harness pin 127.0.0.1 47397
+node ./bin/harness relays
+node ./bin/harness pull
+
 # one daemon: curiosity ticks plus sleep consolidation
 node ./bin/harness daemon 60 60
 node ./bin/harness adapter
 node ./bin/harness adapter rollback
+
+# autostart the daemon on boot
+node ./bin/harness boot
+node ./bin/harness boot install
 ```
 
 Grow while you sleep:
@@ -213,7 +222,9 @@ src/
                held out eval, promote plus rollback
   web/         outside eyes: page fetch plus search channels
   skills/market.js named shelf: publish, market, fetch
+  skills/relays.js pull network: pin, unpin, relays, pull
   sched/       daemonLoop: watch plus sleep in one heartbeat
+  boot/        autostart recipes: systemd, launchd, Termux, cron
 ```
 
 The turn loop:
@@ -246,8 +257,10 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    skill shelf, deep gate on macro fire (shipped).
 8. Adapter plus sync plus daemon: builtin phone side trainer with
    promote and rollback, shelf sync over mesh, unified daemon (shipped).
-9. Next: torch LoRA trainer job for big iron, public shelf relays,
-   scheduled daemon on boot.
+9. Iron plus relays plus boot: torch LoRA reference job, pinned relay
+   pull network, autostart recipes for every platform (shipped).
+10. Next: public shelf relays with gossip, torch soak run on CUDA,
+    daemon health endpoint.
 
 ## Relation to HEIDES and VOLT
 

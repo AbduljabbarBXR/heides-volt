@@ -1,0 +1,41 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const TRAIN = join(here, '..', 'trainers', 'lora', 'train.py');
+
+function run(args, extraEnv = {}) {
+  return execFileSync('python3', [TRAIN, ...args], {
+    encoding: 'utf8',
+    timeout: 60000,
+    env: { ...process.env, ...extraEnv },
+  }).trim();
+}
+
+test('trainer check reports setup state', () => {
+  const out = JSON.parse(run(['--check']));
+  assert.equal(out.ok, true);
+  assert(Array.isArray(out.missing));
+});
+
+test('trainer refuses thin datasets with contract json', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'harnesstrainer'));
+  const ds = join(dir, 'd.jsonl');
+  writeFileSync(ds, '{"prompt":"a","completion":"b","tool":"chat"}\n', 'utf8');
+  const out = JSON.parse(run([ds, join(dir, 'out')]));
+  assert.equal(out.ok, false);
+  assert.equal(out.evals_pass, false);
+  assert.match(out.note, /too few pairs/);
+});
+
+test('trainer refuses unreadable dataset with contract json', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'harnesstrainer'));
+  const out = JSON.parse(run([join(dir, 'nope.jsonl'), join(dir, 'out')]));
+  assert.equal(out.ok, false);
+  assert.equal(out.evals_pass, false);
+});
