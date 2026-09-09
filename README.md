@@ -77,10 +77,69 @@ Delegate a turn to a peer on the local network:
 # device B: serve (loopback by default, LAN host only on trusted nets)
 node ./bin/harness serve 47397
 
+# locked node: pairing code required on every hello and delegate
+node ./bin/harness serve 47397 plum42
+node ./bin/harness link 127.0.0.1 47397 plum42
+
 # device A: link once, then delegate any turn
 node ./bin/harness link 127.0.0.1 47397
 node ./bin/harness delegate 127.0.0.1 47397 check the workspace
 ```
+
+Grow while you sleep:
+
+```bash
+node ./bin/harness watch 60
+```
+
+Trust control for imported skills:
+
+```bash
+node ./bin/harness trust
+node ./bin/harness trust deny <fingerprint>
+node ./bin/harness trust allow <fingerprint>
+node ./bin/harness trust quorum 2
+node ./bin/harness revoke <fingerprint>
+```
+
+Judge the workspace and patches with real HEIDES when installed:
+
+```bash
+node ./bin/harness verify
+node ./bin/harness staged ./fix.patch
+```
+
+## Brains: local model and cloud channels
+
+Default is mock, fully offline. Pick a channel with `HARNESS_PROVIDER`:
+
+| Channel | Value | Key env | Notes |
+| --- | --- | --- | --- |
+| Mock | (unset) | none | deterministic, offline |
+| OpenAI | openai | OPENAI_API_KEY | default model gpt-4o-mini |
+| DeepSeek | deepseek | DEEPSEEK_API_KEY | default model deepseek-chat |
+| OpenRouter | openrouter | OPENROUTER_API_KEY | set HARNESS_MODEL |
+| Hugging Face | hf | HF_TOKEN | OpenAI compatible router, set HARNESS_MODEL |
+| Anthropic | anthropic | ANTHROPIC_API_KEY | native messages API |
+| llama.cpp | llama | none | local server at 127.0.0.1:8080 |
+| Ollama | ollama | none | local server at 127.0.0.1:11434 |
+
+`HARNESS_MODEL` and `HARNESS_BASE_URL` override per channel.
+`HARNESS_TIMEOUT_MS` caps calls (default 60000). Unreachable brains
+fail soft: the turn reports it and records nothing.
+
+Local model, proven on this repo with SmolLM2 360M Q8 on CPU:
+
+```bash
+apt-get install -y llama.cpp-tools
+curl -L -o model.gguf https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf
+llama-server -m model.gguf --port 8080 -c 1024 --n-gpu-layers 0
+HARNESS_PROVIDER=llama HARNESS_MODEL=local node ./bin/harness doctor
+```
+
+Measured: first turn slow through the 360M brain, repeat turns
+served from muscle with zero brain calls. Small brains answer best
+with the built in system steer toward short action first replies.
 
 ## Architecture
 
@@ -88,24 +147,24 @@ node ./bin/harness delegate 127.0.0.1 47397 check the workspace
 src/
   banner.js    ASCII banner
   main.js      command dispatch
-  brain/       brain adapter interface (mock offline by default,
-               passthrough to any OpenAI compatible endpoint)
+  brain/       brain adapter interface plus provider channels:
+               mock offline by default, openai, deepseek,
+               openrouter, hf, anthropic native, llama, ollama
   vessel/      turn loop: muscle fast path, brain slow path,
-               HEIDES verify gate, silent record
+               local verify gate, silent record
+  vessel/verify.js  deep verdict via real heides check plus
+               staged patch judging when the CLI is present
   muscle/      router plus recall ranker plus chain compiler,
-               JSON persisted under OS config dir
+               stopword cleaned tokens, JSON persisted
   curiosity/   drive: propose weakest point, attempt, keep
-               only on verify pass
+               only on verify pass plus green workspace
   skills/      signed 4 KB skill files, export plus verify
                gated import, ed25519 device keys
-  mesh/        TCP task mesh: serve, link, peers, delegate
-test/
-  banner.test.js   checks banner and help text content
-  muscle.test.js   remembers, recalls, rewards, compiles macros
-  vessel.test.js   fast path hit skips brain, miss calls brain
-  curiosity.test.js proposes gaps, keeps verified, drops the rest
-  skills.test.js   roundtrip teaches, tamper and destructive refused
-  mesh.test.js     caps swap, delegate teaches, dead peer clean
+  skills/trust.js  deny list, quorum held rewards, revoke
+               with full rollback
+  mesh/        TCP task mesh: serve, link, peers, delegate,
+               pairing codes plus sealed caps
+  sched/       daemon heartbeat: watch ticks curiosity
 ```
 
 The turn loop:
@@ -129,9 +188,11 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
    (shipped).
 4. Mesh: capability advertisement and delegation across phones, task
    parallelism, never tensor parallelism (shipped, loopback by default,
-   plain text wire in v1).
-5. Next: encrypted wire, real brain endpoint, HEIDES deep verify,
-   skill marketplace with trust graph.
+   pairing codes plus sealed caps).
+5. Channels plus hardening: seven brain channels, deep verify, trust
+   graph, macro fire, watch daemon, live 360M local proof (shipped).
+6. Next: encrypted caps transport beyond pairing, skill marketplace,
+   HEIDES staged gate on every macro fire.
 
 ## Relation to HEIDES and VOLT
 

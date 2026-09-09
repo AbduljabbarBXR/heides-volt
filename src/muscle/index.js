@@ -13,11 +13,21 @@
  * must never train the muscle.
  */
 
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'than', 'then',
+  'are', 'you', 'your', 'was', 'were', 'has', 'have', 'had', 'will',
+  'would', 'all', 'any', 'our', 'out', 'about', 'into', 'over',
+  'after', 'before', 'just', 'how', 'what', 'when', 'where', 'which',
+  'who', 'why', 'not', 'but', 'they', 'them', 'their', 'there', 'here',
+  'its', 'his', 'her', 'she', 'him', 'can', 'please', 'more', 'most',
+  'other', 'such', 'only', 'also', 'very', 'too', 'keep', 'make',
+]);
+
 export function tokens(text) {
   return String(text || '')
     .toLowerCase()
     .split(/[^a-z0-9]+/g)
-    .filter((t) => t.length > 2);
+    .filter((t) => t.length > 2 && !STOPWORDS.has(t));
 }
 
 function overlap(a, b) {

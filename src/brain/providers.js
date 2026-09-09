@@ -69,7 +69,14 @@ async function completeOai(ch, prompt, timeoutMs) {
   const data = await postJson(
     `${ch.base}/chat/completions`,
     headers,
-    { model: ch.model, messages: [{ role: 'user', content: String(prompt || '') }], temperature: 0.2 },
+    {
+      model: ch.model,
+      messages: [
+        { role: 'system', content: 'You are a terse device assistant. Begin every reply with the action verb. Keep replies under 40 words.' },
+        { role: 'user', content: String(prompt || '') },
+      ],
+      temperature: 0.2,
+    },
     timeoutMs
   );
   const text = data?.choices?.[0]?.message?.content || '';

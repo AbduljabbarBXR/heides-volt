@@ -1,6 +1,6 @@
 {
   "name": "heides-agi-harness",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "HEIDES AGI harness: the vessel that turns any brain into a learning resident",
   "type": "module",
   "bin": {
