@@ -34,6 +34,16 @@ def load_pairs(path):
     return pairs
 
 
+def with_labels(enc):
+    """Mirror input ids as labels, ignoring padding. Trainer needs
+    labels or it reports logits only and refuses to train."""
+    labels = []
+    for ids, mask in zip(enc["input_ids"], enc["attention_mask"]):
+        labels.append([i if m else -100 for i, m in zip(ids, mask)])
+    enc["labels"] = labels
+    return enc
+
+
 def check_only():
     missing = []
     for mod in ("torch", "peft", "transformers", "datasets"):
@@ -83,7 +93,8 @@ def main(argv):
         return "### Task\n" + p["prompt"] + "\n### Answer\n" + p["completion"]
 
     def tok_all(items):
-        return tok([fmt(p) for p in items], truncation=True, max_length=512, padding="max_length")
+        enc = tok([fmt(p) for p in items], truncation=True, max_length=512, padding="max_length")
+        return with_labels(enc)
 
     model = AutoModelForCausalLM.from_pretrained(base, torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32)
     model = get_peft_model(model, LoraConfig(r= rank, lora_alpha=rank * 2, target_modules=["q_proj", "v_proj"], lora_dropout=0.05, task_type="CAUSAL_LM"))
