@@ -39,6 +39,13 @@ node ./bin/harness demo
 node ./bin/harness help
 ```
 
+One line installers:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/AbduljabbarBXR/heides-agi-harness/main/scripts/install.sh)
+bash scripts/termux-setup.sh
+```
+
 All commands (subcommands, no flags needed):
 
 ```bash
@@ -282,7 +289,15 @@ plus real outcomes are the immune system. Hallucinated wins are discarded.
     record with auto quarantine, gossip ticks in daemon (shipped).
 12. Provenance plus evals: local, peer and web tags, peer traces kept
     out of distill, red team suite, golden eval tracking (shipped).
-13. Next: 1.0 release with installers, changelog, license audit.
+13. 1.0 release: installers, MIT license plus zero dependency audit,
+    changelog (shipped).
+
+## License audit
+
+Runtime dependencies: zero. Only node builtins plus the Python
+standard library for the LoRA reference job. Optional heavy stack
+(torch, peft, transformers) lives behind `trainers/lora` and never
+ships with the harness. See LICENSE and CHANGELOG.md.
 
 ## Relation to HEIDES and VOLT
 
