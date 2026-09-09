@@ -81,10 +81,11 @@ export class Muscle {
     const adapter = this.store.data.activeAdapter || null;
     let best = null;
     for (const [tool, info] of Object.entries(this.store.data.routes)) {
-      const s = overlap(q, info.toks) + info.reward + adapterBonus(adapter, tool, q);
-      if (!best || s > best.score) best = { tool, score: s };
+      const hit = overlap(q, info.toks);
+      const s = hit + info.reward + adapterBonus(adapter, tool, q);
+      if (!best || s > best.score) best = { tool, score: s, hit };
     }
-    if (best && best.score >= 3) return { tool: best.tool, confidence: 'high' };
+    if (best && best.hit >= 1 && best.score >= 3) return { tool: best.tool, confidence: 'high' };
     if (best && best.score >= 1) return { tool: best.tool, confidence: 'low' };
     return { tool: null, confidence: 'none' };
   }

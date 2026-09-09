@@ -34,6 +34,13 @@ test('verified wins raise route confidence', () => {
   assert.equal(guess.confidence, 'high');
 });
 
+test('zero overlap never rides reward alone', () => {
+  const m = fresh();
+  for (let i = 0; i < 6; i++) m.record({ intent: 'scan the workspace map fully', tool: 'scan', ok: true });
+  const guess = m.predictTool('zebra quantum vortex jumps');
+  assert.notEqual(guess.confidence, 'high');
+});
+
 test('failures lower reward', () => {
   const m = fresh();
   m.record({ intent: 'scan alpha beta gamma', tool: 'scan', ok: true });
